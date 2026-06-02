@@ -346,6 +346,16 @@
                             </tbody>
                         </table>
                     </div>
+                    <!-- Totalizador -->
+                    <div id="pag-totalizador" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total dos Selecionados</p>
+                            <p class="text-lg font-bold text-indigo-600" id="pag-total-valor">R$ 0,00</p>
+                        </div>
+                        <div class="text-xs text-slate-400">
+                            <span id="pag-total-count">0</span> conta(s) selecionada(s)
+                        </div>
+                    </div>
                     <div class="flex justify-end gap-2 pt-2">
                         <button onclick="salvarLotePagamentos()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold shadow-sm transition-colors duration-150 flex items-center gap-2">
                             <i class="fa-solid fa-circle-check"></i> Processar e Salvar Pagamentos
@@ -666,6 +676,7 @@
                 document.getElementById('btn-logout').classList.remove('hidden');
                 document.getElementById('user-name-display').innerText = user.email;
                 document.getElementById('current-date-badge').innerHTML = `<i class="fa-regular fa-calendar-days mr-1"></i> Data: ${new Date().toLocaleDateString('pt-BR')}`;
+                document.getElementById('conta-vencimento').value = new Date().toISOString().split('T')[0];
                 
                 // Carregar dados do Firestore
                 carregarDados();
@@ -730,12 +741,6 @@
 
             // Carregar recursos
             db.collection('recursos').get().then(snapshot => {
-                if (snapshot.empty) {
-                    // Inicializar recursos padrão
-                    APP_STATE.recursos.forEach(r => {
-                        db.collection('recursos').add(r);
-                    });
-                }
                 APP_STATE.recursos = [];
                 snapshot.forEach(doc => {
                     APP_STATE.recursos.push({ id: doc.id, ...doc.data() });
@@ -934,6 +939,8 @@
             document.getElementById('conta-id').value = '';
             document.getElementById('form-conta').reset();
             document.getElementById('conta-vencimento').value = new Date().toISOString().split('T')[0];
+            const minInput = document.getElementById('conta-valormin');
+            if (minInput) delete minInput.dataset.manualEdit;
         }
 
         function replicarContas() {
@@ -1023,7 +1030,7 @@
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors border-b border-slate-200">
                         <td class="px-4 py-3 text-center">
-                            <input type="checkbox" id="chk-pag-${idx}" value="${c.id}" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                            <input type="checkbox" id="chk-pag-${idx}" value="${c.id}" onchange="atualizarTotalizadorPagamentos()" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
                         </td>
                         <td class="px-4 py-3 font-medium text-slate-900">
                             ${c.descricao} 
@@ -1034,7 +1041,7 @@
                         <td class="px-4 py-3 text-xs">${c.vencimento.split('-').reverse().join('/')}</td>
                         <td class="px-4 py-3 text-slate-500 text-xs">${c.parcela || '-'}</td>
                         <td class="px-4 py-3">
-                            <input type="number" step="0.01" id="val-pago-${idx}" value="${saldoAtualReal.toFixed(2)}" oninput="calcularResidualOnTheFly(${idx}, ${saldoAtualReal})" class="w-full text-right rounded-lg border-slate-300 p-1 text-sm border focus:ring-1 focus:ring-indigo-500 bg-slate-50 font-medium text-slate-900">
+                            <input type="number" step="0.01" id="val-pago-${idx}" value="${saldoAtualReal.toFixed(2)}" oninput="calcularResidualOnTheFly(${idx}, ${saldoAtualReal}); atualizarTotalizadorPagamentos()" class="w-full text-right rounded-lg border-slate-300 p-1 text-sm border focus:ring-1 focus:ring-indigo-500 bg-slate-50 font-medium text-slate-900">
                         </td>
                         <td class="px-4 py-3 text-right font-semibold text-xs text-slate-500" id="residual-lbl-${idx}">
                             R$ 0,00
@@ -1051,6 +1058,7 @@
             if (!inputValStr) {
                 lbl.innerText = 'R$ 0,00';
                 lbl.className = "px-4 py-3 text-right font-semibold text-xs text-slate-500";
+                atualizarTotalizadorPagamentos();
                 return;
             }
 
@@ -1066,6 +1074,32 @@
             } else {
                 lbl.innerText = 'Valor Excedente';
                 lbl.className = "px-4 py-3 text-right font-bold text-xs text-rose-600 bg-rose-50 rounded";
+            }
+
+            atualizarTotalizadorPagamentos();
+        }
+
+        function atualizarTotalizadorPagamentos() {
+            const rows = document.querySelectorAll('#table-pagamentos-body tr');
+            let total = 0;
+            let count = 0;
+
+            rows.forEach((row, idx) => {
+                const chk = document.getElementById(`chk-pag-${idx}`);
+                if (chk && chk.checked) {
+                    const val = parseFloat(document.getElementById(`val-pago-${idx}`).value) || 0;
+                    total += val;
+                    count++;
+                }
+            });
+
+            const totalizador = document.getElementById('pag-totalizador');
+            if (count > 0) {
+                totalizador.classList.remove('hidden');
+                document.getElementById('pag-total-valor').innerText = formatarMoeda(total);
+                document.getElementById('pag-total-count').innerText = count;
+            } else {
+                totalizador.classList.add('hidden');
             }
         }
 
