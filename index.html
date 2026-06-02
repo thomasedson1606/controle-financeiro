@@ -642,10 +642,7 @@
         let APP_STATE = {
             contas: [],
             pagamentos: [],
-            recursos: [
-                { id: 'rec-1', descricao: 'Caixa Interno Thomas Tech', valor: 5000.00 },
-                { id: 'rec-2', descricao: 'Conta Corrente Banco do Brasil', valor: 15500.00 }
-            ]
+            recursos: []
         };
 
         let currentUser = null;
@@ -743,7 +740,8 @@
             db.collection('recursos').get().then(snapshot => {
                 APP_STATE.recursos = [];
                 snapshot.forEach(doc => {
-                    APP_STATE.recursos.push({ id: doc.id, ...doc.data() });
+                    const data = doc.data();
+                    APP_STATE.recursos.push({ id: doc.id, descricao: data.descricao, valor: data.valor });
                 });
                 renderRecursoTable();
                 atualizarSeletoresRecursos();
