@@ -123,6 +123,9 @@
             <button onclick="switchTab('efetuados')" id="btn-efetuados" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200 flex items-center gap-2">
                 <i class="fa-solid fa-circle-check"></i> Pagamentos Efetuados
             </button>
+            <button onclick="switchTab('aprovacao')" id="btn-aprovacao" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200 flex items-center gap-2">
+                <i class="fa-solid fa-check-double"></i> Pág. Pendentes Aprovação
+            </button>
             <button onclick="switchTab('pendentes')" id="btn-pendentes" class="tab-btn px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200 flex items-center gap-2">
                 <i class="fa-solid fa-clock"></i> Pagamentos Pendentes
             </button>
@@ -458,6 +461,109 @@
             </div>
         </section>
 
+        <!-- ================= ABA PAGAMENTOS PENDENTES DE APROVAÇÃO ================= -->
+        <section id="tab-aprovacao" class="tab-content space-y-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Pagamentos Pendentes de Aprovação</h2>
+                        <p class="text-xs text-slate-500">Revise, edite e aprove ou reprove os pagamentos realizados antes de efetivá-los</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <label for="aprovacao-periodo" class="text-sm font-medium text-slate-700">Período:</label>
+                            <select id="aprovacao-periodo" onchange="renderAprovacaoTable()" class="rounded-lg border-slate-300 bg-slate-50 text-sm p-2 border focus:ring-2 focus:ring-indigo-500 shadow-sm"></select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label for="aprovacao-responsavel" class="text-sm font-medium text-slate-700">Responsável:</label>
+                            <select id="aprovacao-responsavel" onchange="renderAprovacaoTable()" class="rounded-lg border-slate-300 bg-slate-50 text-sm p-2 border focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                                <option value="TODOS">Todos</option>
+                                <option value="Thomas">Thomas</option>
+                                <option value="Aline">Aline</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal de Aprovação/Reprovação -->
+                <div id="modal-aprovacao" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg p-6">
+                        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                            <h3 class="text-base font-bold text-slate-900">Pagamento Pendente de Aprovação</h3>
+                            <button onclick="fecharModalAprovacao()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+                        </div>
+                        <form id="form-aprovacao" class="space-y-4">
+                            <input type="hidden" id="aprov-pag-id">
+                            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4">
+                                <p class="text-xs font-semibold text-slate-500 mb-1">Conta Vinculada:</p>
+                                <p id="aprov-conta-desc" class="text-sm font-bold text-slate-900"></p>
+                                <p class="text-xs text-slate-500 mt-1">Valor Original: <span id="aprov-conta-valor" class="font-semibold"></span> | Mínimo: <span id="aprov-conta-min" class="font-semibold"></span></p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Valor Pago *</label>
+                                    <input type="number" step="0.01" id="aprov-pag-valor" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Data do Pagamento *</label>
+                                    <input type="date" id="aprov-pag-data" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Responsável *</label>
+                                    <select id="aprov-pag-responsavel" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                                        <option value="Thomas">Thomas</option>
+                                        <option value="Aline">Aline</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Recurso *</label>
+                                    <select id="aprov-pag-recurso" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500"></select>
+                                </div>
+                            </div>
+                            <div class="flex justify-between gap-2 pt-2">
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="reprovarPagamento()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-xmark"></i> Reprovar
+                                    </button>
+                                    <button type="button" onclick="fecharModalAprovacao()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Cancelar</button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="salvarAprovacao()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-floppy-disk"></i> Salvar
+                                    </button>
+                                    <button type="button" onclick="aprovarPagamento()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-1">
+                                        <i class="fa-solid fa-check"></i> Aprovar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
+                    <table class="w-full text-sm text-left text-slate-600">
+                        <thead class="text-xs uppercase bg-slate-100 text-slate-700 border-b border-slate-200">
+                            <tr>
+                                <th class="px-4 py-3 font-bold">Data Pagto</th>
+                                <th class="px-4 py-3 font-bold">Conta (Descrição)</th>
+                                <th class="px-4 py-3 font-bold">Recurso Utilizado</th>
+                                <th class="px-4 py-3 font-bold">Quem Pagou</th>
+                                <th class="px-4 py-3 font-bold text-right">Valor Pago</th>
+                                <th class="px-4 py-3 font-bold text-right">Saldo Restante</th>
+                                <th class="px-4 py-3 font-bold text-center">Status</th>
+                                <th class="px-4 py-3 font-bold text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-aprovacao-body" class="divide-y divide-slate-200 bg-white">
+                            <!-- Inserido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- ================= ABA PAGAMENTOS PENDENTES ================= -->
         <section id="tab-pendentes" class="tab-content space-y-6">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
@@ -537,6 +643,34 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Modal de Edição de Recurso -->
+                <div id="modal-editar-recurso" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6">
+                        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                            <h3 class="text-base font-bold text-slate-900">Editar Recurso</h3>
+                            <button onclick="fecharModalRecurso()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+                        </div>
+                        <form id="form-editar-recurso" onsubmit="salvarEdicaoRecurso(event)" class="space-y-4">
+                            <input type="hidden" id="edit-rec-id">
+                            <input type="hidden" id="old-rec-descricao">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Descrição do Recurso *</label>
+                                <input type="text" id="edit-rec-descricao" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Valor Disponível (R$) *</label>
+                                <input type="number" step="0.01" id="edit-rec-valor" required class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" onclick="fecharModalRecurso()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Cancelar</button>
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center gap-1">
+                                    <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -776,6 +910,7 @@
                     APP_STATE.pagamentos.push({ id: doc.id, ...doc.data() });
                 });
                 renderEfetuadosTable();
+                renderAprovacaoTable();
                 renderDashboard();
             });
 
@@ -798,7 +933,7 @@
         }
 
         function popularSeletoresPeriodo() {
-            const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'pendentes-periodo', 'rep-periodo'];
+            const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'aprovacao-periodo', 'pendentes-periodo', 'rep-periodo'];
             ids.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -842,6 +977,7 @@
             if (tabId === 'pagamentos') onFiltrosPagamentoChange();
             if (tabId === 'efetuados') renderEfetuadosTable();
             if (tabId === 'pendentes') renderPendentesTable();
+            if (tabId === 'aprovacao') renderAprovacaoTable();
             if (tabId === 'configuracao') renderRecursoTable();
             if (tabId === 'relatorios') {
                 atualizarSeletoresRecursosRep();
@@ -1057,7 +1193,7 @@
             const tbody = document.getElementById('table-pagamentos-body');
             tbody.innerHTML = '';
 
-            const elegiveis = APP_STATE.contas.filter(c => c.periodo === periodo && (c.situacao === 'A pagar' || c.situacao === 'Pago Parcial'));
+            const elegiveis = APP_STATE.contas.filter(c => c.periodo === periodo && (c.situacao === 'A pagar' || c.situacao === 'Pago Parcial') && !APP_STATE.pagamentos.some(p => p.contaId === c.id && p.status === 'pendente_aprovacao'));
 
             if (elegiveis.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Nenhuma obrigação pendente ou parcial localizada para este período.</td></tr>`;
@@ -1065,7 +1201,7 @@
             }
 
             elegiveis.forEach((c, idx) => {
-                const totalPagoHistorico = APP_STATE.pagamentos.filter(p => p.contaId === c.id).reduce((sum, curr) => sum + curr.valorPago, 0);
+                const totalPagoHistorico = APP_STATE.pagamentos.filter(p => p.contaId === c.id && (p.status === 'aprovado' || !p.status)).reduce((sum, curr) => sum + curr.valorPago, 0);
                 const saldoAtualReal = c.valor - totalPagoHistorico;
 
                 tbody.innerHTML += `
@@ -1153,10 +1289,7 @@
             const rows = tbody.querySelectorAll('tr');
 
             let blocosProcessados = 0;
-            let erroRecurso = false;
             const promises = [];
-
-            const recursoObj = APP_STATE.recursos.find(r => r.descricao === recursoDesc);
 
             rows.forEach((row, idx) => {
                 const chk = document.getElementById(`chk-pag-${idx}`);
@@ -1166,13 +1299,8 @@
 
                     const contaObj = APP_STATE.contas.find(c => c.id === contaId);
                     if (contaObj) {
-                        const totalPagoHistorico = APP_STATE.pagamentos.filter(p => p.contaId === contaId).reduce((sum, curr) => sum + curr.valorPago, 0);
+                        const totalPagoHistorico = APP_STATE.pagamentos.filter(p => p.contaId === contaId && (p.status === 'aprovado' || !p.status)).reduce((sum, curr) => sum + curr.valorPago, 0);
                         const saldoPendenteAntes = contaObj.valor - totalPagoHistorico;
-
-                        if (recursoObj && recursoObj.valor < valorLancado) {
-                            erroRecurso = true;
-                            return;
-                        }
 
                         const novoPagamento = {
                             contaId: contaId,
@@ -1181,32 +1309,15 @@
                             responsavel: responsavelPag,
                             valorPago: valorLancado,
                             saldoResidual: Math.max(0, saldoPendenteAntes - valorLancado),
-                            dataRealizada: new Date().toISOString().split('T')[0]
+                            dataRealizada: new Date().toISOString().split('T')[0],
+                            status: 'pendente_aprovacao'
                         };
 
                         promises.push(db.collection('pagamentos').add(novoPagamento));
-
-                        if (recursoObj) {
-                            promises.push(db.collection('recursos').doc(recursoObj.id).update({
-                                valor: recursoObj.valor - valorLancado
-                            }));
-                        }
-
-                        const totalPagoAtualizado = totalPagoHistorico + valorLancado;
-                        const novaSituacao = totalPagoAtualizado >= contaObj.valor ? 'Pago' : 'Pago Parcial';
-                        promises.push(db.collection('contas').doc(contaId).update({
-                            situacao: novaSituacao
-                        }));
-
                         blocosProcessados++;
                     }
                 }
             });
-
-            if (erroRecurso) {
-                alert('Operação Abortada: O saldo do recurso selecionado é insuficiente para cobrir um ou mais pagamentos marcados.');
-                return;
-            }
 
             if (blocosProcessados === 0) {
                 alert('Selecione pelo menos uma conta da lista marcando o checkbox lateral para efetuar a baixa.');
@@ -1217,7 +1328,7 @@
                 carregarDados();
                 atualizarSeletoresRecursos();
                 onFiltrosPagamentoChange();
-                alert(`Sucesso! Foram processadas as baixas de ${blocosProcessados} conta(s).`);
+                alert(`Sucesso! ${blocosProcessados} pagamento(s) enviado(s) para aprovação. Após aprovados, as baixas serão efetivadas.`);
             });
         }
 
@@ -1228,7 +1339,7 @@
             const tbody = document.getElementById('table-efetuados-body');
             tbody.innerHTML = '';
 
-            let filtrados = APP_STATE.pagamentos.filter(pag => pag.periodo === p);
+            let filtrados = APP_STATE.pagamentos.filter(pag => pag.periodo === p && (pag.status === 'aprovado' || !pag.status));
             if (resp !== 'TODOS') {
                 filtrados = filtrados.filter(pag => pag.responsavel === resp);
             }
@@ -1313,7 +1424,7 @@
             // Recalcular saldo residual baseado no novo valor
             const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
             if (conta) {
-                const outrosPagamentos = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id);
+                const outrosPagamentos = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id && (p.status === 'aprovado' || !p.status));
                 const totalOutros = outrosPagamentos.reduce((s, p) => s + p.valorPago, 0);
                 const novoSaldo = Math.max(0, conta.valor - totalOutros - novoValor);
 
@@ -1352,9 +1463,13 @@
             if (!pag) return;
 
             db.collection('pagamentos').doc(id).delete().then(() => {
-                // Recalcular situação da conta vinculada
+                if (pag.status === 'pendente_aprovacao') {
+                    carregarDados();
+                    return;
+                }
+                // Recalcular situação da conta vinculada (apenas pagamentos aprovados)
                 if (pag.contaId) {
-                    const pagamentosRestantes = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id);
+                    const pagamentosRestantes = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id && (p.status === 'aprovado' || !p.status));
                     const totalRestante = pagamentosRestantes.reduce((s, p) => s + p.valorPago, 0);
                     const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
                     if (conta) {
@@ -1368,6 +1483,192 @@
                 } else {
                     carregarDados();
                 }
+            });
+        }
+
+        // === PAGAMENTOS PENDENTES DE APROVAÇÃO ===
+        function renderAprovacaoTable() {
+            const p = document.getElementById('aprovacao-periodo').value;
+            const resp = document.getElementById('aprovacao-responsavel').value;
+            const tbody = document.getElementById('table-aprovacao-body');
+            tbody.innerHTML = '';
+
+            let filtrados = APP_STATE.pagamentos.filter(pag => pag.status === 'pendente_aprovacao' && pag.periodo === p);
+            if (resp !== 'TODOS') {
+                filtrados = filtrados.filter(pag => pag.responsavel === resp);
+            }
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Nenhum pagamento pendente de aprovação para os critérios aplicados.</td></tr>`;
+                return;
+            }
+
+            filtrados.forEach(pag => {
+                const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
+                const descConta = conta ? conta.descricao : '[Conta Removida]';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-200 transition-colors">
+                        <td class="px-4 py-3 text-xs font-medium text-slate-500">${pag.dataRealizada.split('-').reverse().join('/')}</td>
+                        <td class="px-4 py-3 font-medium text-slate-900">${descConta}</td>
+                        <td class="px-4 py-3 text-xs text-slate-600">${pag.recurso}</td>
+                        <td class="px-4 py-3"><span class="bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded text-xs">${pag.responsavel}</span></td>
+                        <td class="px-4 py-3 text-right font-semibold text-emerald-600">${formatarMoeda(pag.valorPago)}</td>
+                        <td class="px-4 py-3 text-right text-slate-500">${formatarMoeda(pag.saldoResidual)}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded font-medium">
+                                Pendente
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="abrirModalAprovacao('${pag.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1 mx-auto">
+                                <i class="fa-solid fa-eye"></i> Revisar
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function abrirModalAprovacao(id) {
+            const pag = APP_STATE.pagamentos.find(p => p.id === id);
+            if (!pag) return;
+
+            document.getElementById('aprov-pag-id').value = pag.id;
+
+            const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
+            document.getElementById('aprov-conta-desc').innerText = conta ? conta.descricao : '[Conta Removida]';
+            document.getElementById('aprov-conta-valor').innerText = conta ? formatarMoeda(conta.valor) : 'R$ 0,00';
+            document.getElementById('aprov-conta-min').innerText = conta ? formatarMoeda(conta.valormin) : 'R$ 0,00';
+
+            document.getElementById('aprov-pag-valor').value = pag.valorPago;
+            document.getElementById('aprov-pag-data').value = pag.dataRealizada;
+            document.getElementById('aprov-pag-responsavel').value = pag.responsavel;
+
+            const selectRec = document.getElementById('aprov-pag-recurso');
+            selectRec.innerHTML = '';
+            APP_STATE.recursos.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.descricao;
+                opt.textContent = `${r.descricao} (Saldo: R$ ${r.valor.toFixed(2)})`;
+                if (r.descricao === pag.recurso) opt.selected = true;
+                selectRec.appendChild(opt);
+            });
+            if (!Array.from(selectRec.options).some(o => o.selected)) {
+                const opt = document.createElement('option');
+                opt.value = pag.recurso;
+                opt.textContent = pag.recurso;
+                opt.selected = true;
+                selectRec.appendChild(opt);
+            }
+
+            document.getElementById('modal-aprovacao').classList.remove('hidden');
+        }
+
+        function fecharModalAprovacao() {
+            document.getElementById('modal-aprovacao').classList.add('hidden');
+        }
+
+        function salvarAprovacao() {
+            const id = document.getElementById('aprov-pag-id').value;
+            const pag = APP_STATE.pagamentos.find(p => p.id === id);
+            if (!pag) return;
+
+            const novoValor = parseFloat(document.getElementById('aprov-pag-valor').value);
+            const novaData = document.getElementById('aprov-pag-data').value;
+            const novoResponsavel = document.getElementById('aprov-pag-responsavel').value;
+            const novoRecurso = document.getElementById('aprov-pag-recurso').value;
+
+            const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
+            const totalAprovado = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id && (p.status === 'aprovado' || !p.status)).reduce((s, p) => s + p.valorPago, 0);
+            const novoSaldo = conta ? Math.max(0, conta.valor - totalAprovado - novoValor) : pag.saldoResidual;
+
+            db.collection('pagamentos').doc(id).update({
+                valorPago: novoValor,
+                dataRealizada: novaData,
+                responsavel: novoResponsavel,
+                recurso: novoRecurso,
+                saldoResidual: novoSaldo
+            }).then(() => {
+                fecharModalAprovacao();
+                carregarDados();
+                alert('Alterações salvas! Pagamento continua pendente de aprovação.');
+            }).catch(err => {
+                alert('Erro ao salvar: ' + err.message);
+            });
+        }
+
+        function aprovarPagamento() {
+            const id = document.getElementById('aprov-pag-id').value;
+            const pag = APP_STATE.pagamentos.find(p => p.id === id);
+            if (!pag) return;
+
+            const novoValor = parseFloat(document.getElementById('aprov-pag-valor').value);
+            const novaData = document.getElementById('aprov-pag-data').value;
+            const novoResponsavel = document.getElementById('aprov-pag-responsavel').value;
+            const novoRecurso = document.getElementById('aprov-pag-recurso').value;
+
+            const recursoObj = APP_STATE.recursos.find(r => r.descricao === novoRecurso);
+            if (!recursoObj) {
+                alert('Recurso selecionado não encontrado.');
+                return;
+            }
+            if (recursoObj.valor < novoValor) {
+                alert('Saldo insuficiente no recurso selecionado para aprovar este pagamento.');
+                return;
+            }
+
+            const conta = APP_STATE.contas.find(c => c.id === pag.contaId);
+            if (!conta) {
+                alert('Conta vinculada ao pagamento não encontrada.');
+                return;
+            }
+
+            const outrosAprovados = APP_STATE.pagamentos.filter(p => p.contaId === pag.contaId && p.id !== id && (p.status === 'aprovado' || !p.status));
+            const totalOutros = outrosAprovados.reduce((s, p) => s + p.valorPago, 0);
+            const novoSaldo = Math.max(0, conta.valor - totalOutros - novoValor);
+
+            const promises = [];
+
+            promises.push(db.collection('pagamentos').doc(id).update({
+                valorPago: novoValor,
+                dataRealizada: novaData,
+                responsavel: novoResponsavel,
+                recurso: novoRecurso,
+                saldoResidual: novoSaldo,
+                status: 'aprovado'
+            }));
+
+            promises.push(db.collection('recursos').doc(recursoObj.id).update({
+                valor: recursoObj.valor - novoValor
+            }));
+
+            const totalGeral = totalOutros + novoValor;
+            const novaSituacao = totalGeral >= conta.valor ? 'Pago' : totalGeral > 0 ? 'Pago Parcial' : 'A pagar';
+            promises.push(db.collection('contas').doc(pag.contaId).update({ situacao: novaSituacao }));
+
+            Promise.all(promises).then(() => {
+                fecharModalAprovacao();
+                carregarDados();
+                alert('Pagamento aprovado com sucesso!');
+            }).catch(err => {
+                alert('Erro ao aprovar pagamento: ' + err.message);
+            });
+        }
+
+        function reprovarPagamento() {
+            if (!confirm('Tem certeza que deseja reprovar este pagamento? A conta voltará para o status anterior.')) return;
+
+            const id = document.getElementById('aprov-pag-id').value;
+            const pag = APP_STATE.pagamentos.find(p => p.id === id);
+            if (!pag) return;
+
+            db.collection('pagamentos').doc(id).delete().then(() => {
+                fecharModalAprovacao();
+                carregarDados();
+                alert('Pagamento reprovado e removido. A conta permanece como pendente.');
+            }).catch(err => {
+                alert('Erro ao reprovar pagamento: ' + err.message);
             });
         }
 
@@ -1419,7 +1720,10 @@
                         <td class="px-4 py-3 font-medium text-slate-900">${r.descricao}</td>
                         <td class="px-4 py-3 text-right font-bold text-indigo-600">${formatarMoeda(r.valor)}</td>
                         <td class="px-4 py-3 text-center">
-                            <button onclick="deletarRecurso('${r.id}')" class="text-rose-600 hover:text-rose-900 p-1 rounded hover:bg-rose-50 transition-colors" title="Remover"><i class="fa-solid fa-trash"></i></button>
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="editarRecurso('${r.id}')" class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deletarRecurso('${r.id}')" class="text-rose-600 hover:text-rose-900 p-1 rounded hover:bg-rose-50 transition-colors" title="Remover"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -1446,6 +1750,54 @@
                     carregarDados();
                 });
             }
+        }
+
+        function editarRecurso(id) {
+            const recurso = APP_STATE.recursos.find(r => r.id === id);
+            if (!recurso) return;
+
+            document.getElementById('edit-rec-id').value = recurso.id;
+            document.getElementById('edit-rec-descricao').value = recurso.descricao;
+            document.getElementById('edit-rec-valor').value = recurso.valor;
+            document.getElementById('old-rec-descricao').value = recurso.descricao;
+
+            document.getElementById('modal-editar-recurso').classList.remove('hidden');
+        }
+
+        function fecharModalRecurso() {
+            document.getElementById('modal-editar-recurso').classList.add('hidden');
+        }
+
+        function salvarEdicaoRecurso(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-rec-id').value;
+            const novaDesc = document.getElementById('edit-rec-descricao').value;
+            const novoValor = parseFloat(document.getElementById('edit-rec-valor').value);
+            const oldDesc = document.getElementById('old-rec-descricao').value;
+
+            const promises = [];
+
+            promises.push(db.collection('recursos').doc(id).update({
+                descricao: novaDesc,
+                valor: novoValor
+            }));
+
+            if (oldDesc !== novaDesc) {
+                const pagamentosToUpdate = APP_STATE.pagamentos.filter(p => p.recurso === oldDesc);
+                pagamentosToUpdate.forEach(p => {
+                    promises.push(db.collection('pagamentos').doc(p.id).update({
+                        recurso: novaDesc
+                    }));
+                });
+            }
+
+            Promise.all(promises).then(() => {
+                fecharModalRecurso();
+                carregarDados();
+                alert('Recurso atualizado com sucesso! Os vínculos com pagamentos existentes foram preservados.');
+            }).catch(err => {
+                alert('Erro ao atualizar recurso: ' + err.message);
+            });
         }
 
         // === RELATÓRIOS ===
@@ -1476,7 +1828,7 @@
 
             if (fRespPag || fRecurso || fPagDe || fPagAte) {
                 resultado = resultado.filter(c => {
-                    const pagamentosDaConta = APP_STATE.pagamentos.filter(p => p.contaId === c.id);
+                    const pagamentosDaConta = APP_STATE.pagamentos.filter(p => p.contaId === c.id && (p.status === 'aprovado' || !p.status));
                     if (pagamentosDaConta.length === 0) return false;
 
                     return pagamentosDaConta.some(p => {
@@ -1493,7 +1845,7 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 text-xs">Nenhum registro atende aos critérios combinados informados.</td></tr>`;
             } else {
                 resultado.forEach(c => {
-                    const pagamentosDaConta = APP_STATE.pagamentos.filter(p => p.contaId === c.id);
+                    const pagamentosDaConta = APP_STATE.pagamentos.filter(p => p.contaId === c.id && (p.status === 'aprovado' || !p.status));
                     let historicoStr = pagamentosDaConta.length === 0 ? '<span class="text-slate-400 text-xs">Sem lançamentos</span>' : '';
 
                     pagamentosDaConta.forEach(p => {
@@ -1532,7 +1884,7 @@ O download iniciará automaticamente no navegador.`);
             const periodoSel = document.getElementById('dash-periodo').value;
 
             const contasPeriodo = APP_STATE.contas.filter(c => c.periodo === periodoSel);
-            const pagamentosPeriodo = APP_STATE.pagamentos.filter(p => p.periodo === periodoSel);
+            const pagamentosPeriodo = APP_STATE.pagamentos.filter(p => p.periodo === periodoSel && (p.status === 'aprovado' || !p.status));
 
             const totalContas = contasPeriodo.reduce((sum, c) => sum + c.valor, 0);
             const totalPago = pagamentosPeriodo.reduce((sum, p) => sum + p.valorPago, 0);
@@ -1540,7 +1892,7 @@ O download iniciará automaticamente no navegador.`);
             let totalPendente = 0;
             contasPeriodo.forEach(c => {
                 if (c.situacao !== 'Pago') {
-                    const jaPago = APP_STATE.pagamentos.filter(p => p.contaId === c.id).reduce((s, curr) => s + curr.valorPago, 0);
+                    const jaPago = APP_STATE.pagamentos.filter(p => p.contaId === c.id && (p.status === 'aprovado' || !p.status)).reduce((s, curr) => s + curr.valorPago, 0);
                     totalPendente += (c.valor - jaPago);
                 }
             });
