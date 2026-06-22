@@ -97,6 +97,25 @@
                 </button>
             </form>
 
+            <div class="mt-3 text-center">
+                <button type="button" onclick="toggleResetSenha()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                    <i class="fa-solid fa-key mr-1"></i> Esqueci a senha
+                </button>
+            </div>
+
+            <div id="reset-senha-box" class="hidden mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <p class="text-sm font-semibold text-slate-700">Redefinir Senha</p>
+                <p class="text-xs text-slate-500">Digite o e-mail cadastrado para receber o link de redefinição.</p>
+                <input type="email" id="reset-email" placeholder="seu@email.com" class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                <div class="flex gap-2">
+                    <button type="button" onclick="toggleResetSenha()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg text-sm font-semibold transition-colors">Cancelar</button>
+                    <button type="button" onclick="resetPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-paper-plane"></i> Enviar
+                    </button>
+                </div>
+                <div id="reset-msg" class="text-xs text-center hidden"></div>
+            </div>
+
             <div id="login-error" class="mt-4 text-center text-sm text-rose-600 hidden"></div>
             
             <p class="mt-6 text-center text-xs text-slate-400 border-t border-slate-100 pt-4">
@@ -890,6 +909,40 @@
                 .catch(err => {
                     errorDiv.classList.remove('hidden');
                     errorDiv.innerText = 'Erro: ' + err.message;
+                });
+        }
+
+        function toggleResetSenha() {
+            const box = document.getElementById('reset-senha-box');
+            const msg = document.getElementById('reset-msg');
+            box.classList.toggle('hidden');
+            msg.classList.add('hidden');
+            document.getElementById('reset-email').value = '';
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('reset-email').value.trim();
+            const msg = document.getElementById('reset-msg');
+
+            if (!email) {
+                msg.classList.remove('hidden');
+                msg.className = 'text-xs text-center text-rose-600';
+                msg.innerText = 'Informe um e-mail válido.';
+                return;
+            }
+
+            msg.classList.remove('hidden');
+            msg.className = 'text-xs text-center text-slate-500';
+            msg.innerText = 'Enviando...';
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    msg.className = 'text-xs text-center text-emerald-600 font-medium';
+                    msg.innerText = 'E-mail de redefinição enviado! Verifique sua caixa de entrada.';
+                })
+                .catch(err => {
+                    msg.className = 'text-xs text-center text-rose-600';
+                    msg.innerText = 'Erro: ' + err.message;
                 });
         }
 
