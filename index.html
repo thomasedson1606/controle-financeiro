@@ -662,7 +662,8 @@
                                     <tr>
                                         <th class="px-4 py-3 font-bold">Descrição</th>
                                         <th class="px-4 py-3 font-bold text-right">Saldo Atual</th>
-                                        <th class="px-4 py-3 font-bold text-center w-24">Ações</th>
+                                        <th class="px-4 py-3 font-bold text-right">Saldo Original</th>
+                                        <th class="px-4 py-3 font-bold text-center w-32">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-recursos-body" class="divide-y divide-slate-200 bg-white">
@@ -1317,7 +1318,19 @@
                 Promise.all(promises).then(() => {
                     document.getElementById('filtro-periodo-contas').value = proximoPeriodo;
                     carregarDados();
-                    alert(`Sucesso! ${replicadas} contas foram clonadas/replicadas para o período ${proximoPeriodo}.`);
+                    if (APP_STATE.recursos.length > 0 && confirm(`Contas clonadas! Deseja também restaurar o saldo de TODOS os recursos para o valor original do novo período?`)) {
+                        const resetPromises = [];
+                        APP_STATE.recursos.forEach(r => {
+                            const valOrg = r.valorOriginal || r.valor;
+                            resetPromises.push(db.collection('recursos').doc(r.id).update({ valor: valOrg }));
+                        });
+                        Promise.all(resetPromises).then(() => {
+                            carregarDados();
+                            alert(`Sucesso! ${replicadas} contas clonadas e saldo de ${resetPromises.length} recurso(s) restaurado(s) para o valor original.`);
+                        });
+                    } else {
+                        alert(`Sucesso! ${replicadas} contas foram clonadas/replicadas para o período ${proximoPeriodo}.`);
+                    }
                 });
             }
         }
@@ -1862,17 +1875,21 @@
             tbody.innerHTML = '';
 
             if (APP_STATE.recursos.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-slate-400 text-xs">Nenhum recurso financeiro mapeado.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400 text-xs">Nenhum recurso financeiro mapeado.</td></tr>`;
                 return;
             }
 
             APP_STATE.recursos.forEach(r => {
+                const valorOriginal = r.valorOriginal || r.valor;
+                const zerado = r.valor <= 0;
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 border-b border-slate-200 transition-colors">
                         <td class="px-4 py-3 font-medium text-slate-900">${r.descricao}</td>
-                        <td class="px-4 py-3 text-right font-bold text-indigo-600">${formatarMoeda(r.valor)}</td>
+                        <td class="px-4 py-3 text-right font-bold ${zerado ? 'text-rose-600' : 'text-indigo-600'}">${formatarMoeda(r.valor)}</td>
+                        <td class="px-4 py-3 text-right text-slate-400">${formatarMoeda(valorOriginal)}</td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1.5">
+                                ${r.valor < valorOriginal ? `<button onclick="restaurarSaldoRecurso('${r.id}')" class="text-emerald-600 hover:text-emerald-900 p-1 rounded hover:bg-emerald-50 transition-colors" title="Restaurar Saldo Original"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
                                 <button onclick="editarRecurso('${r.id}')" class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
                                 <button onclick="deletarRecurso('${r.id}')" class="text-rose-600 hover:text-rose-900 p-1 rounded hover:bg-rose-50 transition-colors" title="Remover"><i class="fa-solid fa-trash"></i></button>
                             </div>
@@ -1884,9 +1901,11 @@
 
         function salvarRecurso(e) {
             e.preventDefault();
+            const valor = parseFloat(document.getElementById('rec-valor').value);
             const novoRec = {
                 descricao: document.getElementById('rec-descricao').value,
-                valor: parseFloat(document.getElementById('rec-valor').value)
+                valor: valor,
+                valorOriginal: valor
             };
 
             db.collection('recursos').add(novoRec).then(() => {
@@ -1899,6 +1918,17 @@
         function deletarRecurso(id) {
             if (confirm('Deseja excluir este recurso?')) {
                 db.collection('recursos').doc(id).delete().then(() => {
+                    carregarDados();
+                });
+            }
+        }
+
+        function restaurarSaldoRecurso(id) {
+            const recurso = APP_STATE.recursos.find(r => r.id === id);
+            if (!recurso) return;
+            const valorOriginal = recurso.valorOriginal || recurso.valor;
+            if (confirm(`Restaurar "${recurso.descricao}" para o saldo original de ${formatarMoeda(valorOriginal)}?`)) {
+                db.collection('recursos').doc(id).update({ valor: valorOriginal }).then(() => {
                     carregarDados();
                 });
             }
@@ -1929,10 +1959,17 @@
 
             const promises = [];
 
-            promises.push(db.collection('recursos').doc(id).update({
-                descricao: novaDesc,
-                valor: novoValor
-            }));
+            const updateData = { descricao: novaDesc, valor: novoValor };
+            // Se não tinha valorOriginal ou é o mesmo que valor, sync
+            const recurso = APP_STATE.recursos.find(r => r.id === id);
+            if (recurso) {
+                const oldOriginal = recurso.valorOriginal || recurso.valor;
+                if (oldOriginal === recurso.valor) {
+                    updateData.valorOriginal = novoValor;
+                }
+            }
+
+            promises.push(db.collection('recursos').doc(id).update(updateData));
 
             if (oldDesc !== novaDesc) {
                 const pagamentosToUpdate = APP_STATE.pagamentos.filter(p => p.recurso === oldDesc);
