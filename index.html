@@ -129,7 +129,10 @@
 
     <!-- Main Container (protegido por login) -->
     <div id="app-main" class="hidden flex flex-col lg:flex-row min-h-[calc(100vh-4rem)]">
-        
+
+        <!-- Erro Firestore -->
+        <div id="firestore-error-msg" class="hidden fixed top-4 right-4 z-50 bg-rose-50 border border-rose-200 text-rose-700 text-xs px-4 py-3 rounded-lg shadow-lg max-w-sm"></div>
+
         <!-- Sidebar Menu -->
         <aside class="lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 shadow-sm lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto shrink-0">
             <nav class="flex lg:flex-col gap-1 p-3 overflow-x-auto lg:overflow-x-visible" aria-label="Menu do Sistema">
@@ -1054,6 +1057,8 @@
                 renderContasTable();
                 renderPendentesTable();
                 renderDashboard();
+            }).catch(err => {
+                mostrarErroFirestore(err);
             });
 
             // Carregar pagamentos
@@ -1065,6 +1070,8 @@
                 renderEfetuadosTable();
                 renderAprovacaoTable();
                 renderDashboard();
+            }).catch(err => {
+                mostrarErroFirestore(err);
             });
 
             // Carregar recursos
@@ -1077,7 +1084,17 @@
                 renderRecursoTable();
                 atualizarSeletoresRecursos();
                 renderDashboard();
+            }).catch(err => {
+                mostrarErroFirestore(err);
             });
+        }
+
+        function mostrarErroFirestore(err) {
+            const msg = document.getElementById('firestore-error-msg');
+            if (msg) {
+                msg.classList.remove('hidden');
+                msg.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> Erro ao carregar dados: ${err.message}. <a href="https://console.firebase.google.com/project/pessoal-thomas/firestore/rules" target="_blank" class="underline font-medium">Clique aqui para corrigir as regras</a>`;
+            }
         }
 
         function salvarDadosNoStorage() {
