@@ -16,6 +16,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <!-- Firebase Firestore -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase Functions -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -675,6 +677,36 @@
                     </div>
                 </div>
 
+                <!-- Gerenciar Usuários -->
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <h3 class="text-sm font-bold text-slate-900 mb-1">Gerenciar Usuários</h3>
+                    <p class="text-xs text-slate-500 mb-4">Altere a senha de qualquer usuário cadastrado no sistema</p>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-md space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail do Usuário *</label>
+                            <input type="email" id="user-email" required placeholder="ex: aline@thomastech.com" class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nova Senha *</label>
+                            <input type="password" id="user-new-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Confirmar Nova Senha *</label>
+                            <input type="password" id="user-confirm-password" required placeholder="Repita a nova senha" class="w-full rounded-lg border-slate-300 bg-white text-sm p-2 border focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <button type="button" onclick="alterarSenhaUsuario()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors duration-150 flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-key"></i> Alterar Senha
+                        </button>
+                        <div id="user-password-msg" class="text-xs text-center hidden"></div>
+                        <p class="text-[10px] text-slate-400 italic">
+                            <i class="fa-solid fa-info-circle mr-1"></i> 
+                            Se não houver Cloud Function implantada, use o 
+                            <a href="https://console.firebase.google.com/project/pessoal-thomas/authentication/users" target="_blank" class="text-indigo-600 underline">Firebase Console</a> 
+                            para alterar senhas manualmente.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Modal de Edição de Recurso -->
                 <div id="modal-editar-recurso" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
                     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-6">
@@ -947,6 +979,66 @@
                 .catch(err => {
                     msg.className = 'text-xs text-center text-rose-600';
                     msg.innerText = 'Erro: ' + err.message;
+                });
+        }
+
+        function alterarSenhaUsuario() {
+            const email = document.getElementById('user-email').value.trim();
+            const newPass = document.getElementById('user-new-password').value;
+            const confirmPass = document.getElementById('user-confirm-password').value;
+            const msg = document.getElementById('user-password-msg');
+
+            msg.classList.add('hidden');
+
+            if (!email) {
+                msg.className = 'text-xs text-center text-rose-600';
+                msg.innerText = 'Informe o e-mail do usuário.';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            if (newPass.length < 6) {
+                msg.className = 'text-xs text-center text-rose-600';
+                msg.innerText = 'A senha deve ter no mínimo 6 caracteres.';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                msg.className = 'text-xs text-center text-rose-600';
+                msg.innerText = 'As senhas não conferem.';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            msg.className = 'text-xs text-center text-slate-500';
+            msg.innerText = 'Alterando senha...';
+            msg.classList.remove('hidden');
+
+            const functions = firebase.functions();
+            const changePassword = functions.httpsCallable('alterarSenhaUsuario');
+
+            changePassword({ email, newPassword: newPass })
+                .then(result => {
+                    if (result.data.success) {
+                        msg.className = 'text-xs text-center text-emerald-600 font-medium';
+                        msg.innerText = 'Senha alterada com sucesso!';
+                        document.getElementById('user-email').value = '';
+                        document.getElementById('user-new-password').value = '';
+                        document.getElementById('user-confirm-password').value = '';
+                    }
+                })
+                .catch(err => {
+                    msg.className = 'text-xs text-center text-rose-600';
+                    if (err.code === 'functions/unauthenticated') {
+                        msg.innerText = 'Usuário não autenticado. Faça login novamente.';
+                    } else if (err.code === 'functions/not-found') {
+                        msg.innerText = 'Usuário com este e-mail não encontrado no Firebase Auth.';
+                    } else if (err.code === 'functions/unavailable' || err.code === 'functions/internal') {
+                        msg.innerText = 'Cloud Function não disponível. Use o Firebase Console para alterar a senha manualmente.';
+                    } else {
+                        msg.innerText = 'Erro: ' + (err.details || err.message);
+                    }
                 });
         }
 
