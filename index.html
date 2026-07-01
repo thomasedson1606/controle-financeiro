@@ -1086,25 +1086,14 @@
         }
 
         function popularSeletoresPeriodo() {
-            const hoje = new Date();
-            const mesAtual = hoje.getMonth();
-            const anoAtual = hoje.getFullYear();
-            const periodoAtual = `${MESES_NOME[mesAtual]}/${anoAtual}`;
-
             const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'aprovacao-periodo', 'pendentes-periodo', 'rep-periodo'];
             ids.forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
                     element.innerHTML = (id === 'rep-periodo') ? '<option value="">[Todos os Períodos]</option>' : '';
-                    let encontrou = false;
                     PERIODOS_SISTEMA.forEach(p => {
-                        const selected = (p === periodoAtual) ? 'selected' : '';
-                        if (p === periodoAtual) encontrou = true;
-                        element.innerHTML += `<option value="${p}" ${selected}>${p}</option>`;
+                        element.innerHTML += `<option value="${p}">${p}</option>`;
                     });
-                    if (!encontrou && id !== 'rep-periodo') {
-                        element.value = PERIODOS_SISTEMA[0];
-                    }
                 }
             });
         }
