@@ -1051,7 +1051,6 @@
                 snapshot.forEach(doc => {
                     APP_STATE.contas.push({ id: doc.id, ...doc.data() });
                 });
-                autoSelecionarPeriodo();
                 renderContasTable();
                 renderPendentesTable();
                 renderDashboard();
@@ -1087,47 +1086,25 @@
         }
 
         function popularSeletoresPeriodo() {
-            const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'aprovacao-periodo', 'pendentes-periodo', 'rep-periodo'];
-            ids.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.innerHTML = (id === 'rep-periodo') ? '<option value="">[Todos os Períodos]</option>' : '';
-                    PERIODOS_SISTEMA.forEach(p => {
-                        element.innerHTML += `<option value="${p}">${p}</option>`;
-                    });
-                }
-            });
-            autoSelecionarPeriodo();
-        }
-
-        function autoSelecionarPeriodo() {
             const hoje = new Date();
             const mesAtual = hoje.getMonth();
             const anoAtual = hoje.getFullYear();
             const periodoAtual = `${MESES_NOME[mesAtual]}/${anoAtual}`;
 
-            const periodoPref = PERIODOS_SISTEMA.includes(periodoAtual) ? periodoAtual : PERIODOS_SISTEMA[PERIODOS_SISTEMA.length - 1];
-
-            const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'aprovacao-periodo', 'pendentes-periodo'];
+            const ids = ['dash-periodo', 'filtro-periodo-contas', 'pag-filtro-periodo', 'efetuados-periodo', 'aprovacao-periodo', 'pendentes-periodo', 'rep-periodo'];
             ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.value = periodoPref;
-                }
-            });
-
-            const periodoContas = APP_STATE.contas.length > 0
-                ? APP_STATE.contas.reduce((latest, c) => {
-                    const idx = PERIODOS_SISTEMA.indexOf(c.periodo);
-                    const best = PERIODOS_SISTEMA.indexOf(latest);
-                    return idx > best ? c.periodo : latest;
-                }, PERIODOS_SISTEMA[0])
-                : periodoPref;
-
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.value = periodoContas;
+                const element = document.getElementById(id);
+                if (element) {
+                    element.innerHTML = (id === 'rep-periodo') ? '<option value="">[Todos os Períodos]</option>' : '';
+                    let encontrou = false;
+                    PERIODOS_SISTEMA.forEach(p => {
+                        const selected = (p === periodoAtual) ? 'selected' : '';
+                        if (p === periodoAtual) encontrou = true;
+                        element.innerHTML += `<option value="${p}" ${selected}>${p}</option>`;
+                    });
+                    if (!encontrou && id !== 'rep-periodo') {
+                        element.value = PERIODOS_SISTEMA[0];
+                    }
                 }
             });
         }
