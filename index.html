@@ -347,6 +347,11 @@
                                 <th class="px-4 py-3 font-bold">Responsável</th>
                                 <th class="px-4 py-3 font-bold">Vencimento</th>
                                 <th class="px-4 py-3 font-bold">Parcela</th>
+                                <th class="px-4 py-3 font-bold text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <input type="checkbox" id="select-all-contas" onchange="toggleSelectAllContas(this)" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" title="Selecionar todas para replicar">
+                                    </div>
+                                </th>
                                 <th class="px-4 py-3 font-bold text-center">Ações</th>
                             </tr>
                         </thead>
@@ -1257,7 +1262,7 @@
             if (parcFiltro) contasFiltradas = contasFiltradas.filter(c => (c.parcela || '').toLowerCase().includes(parcFiltro));
 
             if (contasFiltradas.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Nenhuma conta cadastrada para o período ${periodoSelecionado}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400 text-xs">Nenhuma conta cadastrada para o período ${periodoSelecionado}.</td></tr>`;
                 return;
             }
 
@@ -1281,6 +1286,9 @@
                         <td class="px-4 py-3"><span class="px-2 py-1 rounded bg-slate-100 text-xs font-medium text-slate-700">${c.responsavel}</span></td>
                         <td class="px-4 py-3"><span class="${vencimentoClasse}">${c.vencimento.split('-').reverse().join('/')}</span></td>
                         <td class="px-4 py-3 text-slate-500">${c.parcela || '-'}</td>
+                        <td class="px-4 py-3 text-center">
+                            <input type="checkbox" data-conta-id="${c.id}" class="conta-replicar-check w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+                        </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex items-center justify-center gap-1.5">
                                 <button onclick="editarConta('${c.id}')" class="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50 transition-colors" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -1353,6 +1361,12 @@
             if (minInput) delete minInput.dataset.manualEdit;
         }
 
+        function toggleSelectAllContas(checkbox) {
+            document.querySelectorAll('#table-contas-body .conta-replicar-check').forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
         function replicarContas() {
             const periodoAtual = document.getElementById('filtro-periodo-contas').value;
             const idxAtual = PERIODOS_SISTEMA.indexOf(periodoAtual);
@@ -1363,14 +1377,25 @@
             }
 
             const proximoPeriodo = PERIODOS_SISTEMA[idxAtual + 1];
-            const contasDoMes = APP_STATE.contas.filter(c => c.periodo === periodoAtual);
+
+            const checkboxes = Array.from(document.querySelectorAll('#table-contas-body .conta-replicar-check'));
+            const idsSelecionados = new Set(
+                checkboxes.filter(cb => cb.checked).map(cb => cb.dataset.contaId)
+            );
+
+            let contasDoMes;
+            if (idsSelecionados.size > 0) {
+                contasDoMes = APP_STATE.contas.filter(c => c.periodo === periodoAtual && idsSelecionados.has(c.id));
+            } else {
+                contasDoMes = APP_STATE.contas.filter(c => c.periodo === periodoAtual);
+            }
 
             if (contasDoMes.length === 0) {
                 alert(`Não existem contas lançadas em ${periodoAtual} para serem replicadas.`);
                 return;
             }
 
-            if (confirm(`Deseja clonar as ${contasDoMes.length} contas de [${periodoAtual}] para o próximo período [${proximoPeriodo}]?`)) {
+            if (confirm(`Deseja clonar ${contasDoMes.length} conta(s) de [${periodoAtual}] para o próximo período [${proximoPeriodo}]?`)) {
                 let replicadas = 0;
                 const promises = [];
 
